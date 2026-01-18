@@ -49,6 +49,9 @@ import base64
 import gitlab
 import requests
 import yaml
+import subprocess
+import tempfile
+import shutil
 from gitlab import exceptions as gl_ex
 
 
@@ -281,8 +284,8 @@ def start_github_import(
 
     if resp.status_code not in {201, 202}:
         detail = resp.json() if resp.content else {}
-        print("[ERRORE] Import in GitHub fallito:", detail)
-        sys.exit(1)
+        # 404 con messaggio di deprecazione: gestito a monte
+        raise RuntimeError(f"IMPORT_FAILED:{detail}")
 
     return resp.json()
 
@@ -352,6 +355,25 @@ def upsert_github_file(token: str, owner: str, repo: str, path: str, content: st
     if resp_put.status_code >= 300:
         print("[ERRORE] Scrittura file GitHub fallita:", resp_put.text)
         sys.exit(1)
+
+
+def mirror_repo_via_git(token: str, source_url: str, target_owner: str, target_repo: str):
+    """
+    Usa git --mirror per copiare il repo sorgente nel nuovo repo target.
+    """
+    workdir = tempfile.mkdtemp(prefix="repo_mirror_")
+    try:
+        # URL con token per sorgente e destinazione
+        source_auth = source_url.replace("https://", f"https://x-access-token:{token}@")
+        target_auth = f"https://x-access-token:{token}@github.com/{target_owner}/{target_repo}.git"
+
+        subprocess.run(["git", "clone", "--mirror", source_auth, workdir], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(["git", "-C", workdir, "push", "--mirror", target_auth], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        print("[ERRORE] Mirror tramite git fallito:", e.stderr.decode("utf-8", errors="ignore"))
+        sys.exit(1)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
 
 
 # ----------------- Generation utility -----------------
@@ -755,16 +777,25 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
 
     repo_owner = created_repo.get("owner", {}).get("login", github_owner)
 
-    start_github_import(
-        github_token,
-        repo_owner,
-        new_project_name,
-        origin_repo_url,
-        repo_owner,
-        github_token,
-    )
+    # Import diretto via API; se deprecato, fallback mirror git
+    try:
+        start_github_import(
+            github_token,
+            repo_owner,
+            new_project_name,
+            origin_repo_url,
+            repo_owner,
+            github_token,
+        )
+        wait_for_github_import(github_token, repo_owner, new_project_name)
+    except RuntimeError as err:
+        msg = str(err)
+        if "IMPORT_FAILED" in msg:
+            print("[INFO] Import API non disponibile, uso mirror git...")
+            mirror_repo_via_git(github_token, origin_repo_url, repo_owner, new_project_name)
+        else:
+            raise
 
-    wait_for_github_import(github_token, repo_owner, new_project_name)
     set_github_default_branch(github_token, repo_owner, new_project_name, default_branch)
 
     # Preparazione contenuti
