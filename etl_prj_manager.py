@@ -768,6 +768,11 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
 
     github_private = github_cfg.get("visibility", "private").lower() != "public"
 
+    # verifica se il repo di destinazione esiste già
+    if github_repo_exists(github_token, github_owner, new_project_name):
+        print(f"[ERRORE] Il repository di destinazione '{github_owner}/{new_project_name}' esiste già. Cambia short_name_template o scegli un altro nome.")
+        sys.exit(1)
+
     created_repo = create_github_repo(
         github_token,
         github_owner,
