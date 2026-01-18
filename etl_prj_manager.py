@@ -235,20 +235,29 @@ def github_headers(token: str) -> dict:
 
 def create_github_repo(token: str, owner: str, repo_name: str, private: bool = True) -> dict:
     headers = github_headers(token)
-    if owner:
-        url = f"https://api.github.com/orgs/{owner}/repos"
-    else:
-        url = "https://api.github.com/user/repos"
-
     payload = {"name": repo_name, "private": private, "auto_init": False}
-    resp = requests.post(url, headers=headers, json=payload, timeout=30)
 
-    if resp.status_code >= 300:
-        detail = resp.json() if resp.content else {}
-        print("[ERRORE] Creazione repository GitHub fallita:", detail)
+    # 1) tenta come organizzazione (se owner specificato)
+    if owner:
+        url_org = f"https://api.github.com/orgs/{owner}/repos"
+        resp_org = requests.post(url_org, headers=headers, json=payload, timeout=30)
+        if resp_org.status_code < 300:
+            return resp_org.json()
+        # se l'owner non è un'org o non abbiamo permessi, provo come utente
+        if resp_org.status_code != 404:
+            detail = resp_org.json() if resp_org.content else {}
+            print("[ERRORE] Creazione repository GitHub fallita (org):", detail)
+            sys.exit(1)
+
+    # 2) fallback: crea sul profilo utente associato al token
+    url_user = "https://api.github.com/user/repos"
+    resp_user = requests.post(url_user, headers=headers, json=payload, timeout=30)
+    if resp_user.status_code >= 300:
+        detail = resp_user.json() if resp_user.content else {}
+        print("[ERRORE] Creazione repository GitHub fallita (utente):", detail)
         sys.exit(1)
 
-    return resp.json()
+    return resp_user.json()
 
 
 def start_github_import(
@@ -744,17 +753,19 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
         private=github_private,
     )
 
+    repo_owner = created_repo.get("owner", {}).get("login", github_owner)
+
     start_github_import(
         github_token,
-        github_owner,
+        repo_owner,
         new_project_name,
         origin_repo_url,
-        github_owner,
+        repo_owner,
         github_token,
     )
 
-    wait_for_github_import(github_token, github_owner, new_project_name)
-    set_github_default_branch(github_token, github_owner, new_project_name, default_branch)
+    wait_for_github_import(github_token, repo_owner, new_project_name)
+    set_github_default_branch(github_token, repo_owner, new_project_name, default_branch)
 
     # Preparazione contenuti
     users_cfg = cfg.get("users", {})
@@ -779,7 +790,7 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
         ]
         upsert_github_file(
             github_token,
-            github_owner,
+            repo_owner,
             new_project_name,
             ensure_settings_path(f"{username}_etlSetting.yml"),
             "\n".join(content_lines) + "\n",
@@ -790,7 +801,7 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
     if submode == "register":
         upsert_github_file(
             github_token,
-            github_owner,
+            repo_owner,
             new_project_name,
             ensure_settings_path("privacy_default_template.csv"),
             register_csv_content,
@@ -801,7 +812,7 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
         if aoo_content:
             upsert_github_file(
                 github_token,
-                github_owner,
+                repo_owner,
                 new_project_name,
                 ensure_settings_path("AOO.csv"),
                 aoo_content,
@@ -811,7 +822,7 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
         if uo_content:
             upsert_github_file(
                 github_token,
-                github_owner,
+                repo_owner,
                 new_project_name,
                 ensure_settings_path("UO.csv"),
                 uo_content,
