@@ -22,6 +22,7 @@ jobs:
           pip install python-gitlab requests pyyaml gitpython
       - name: Esegui replica (modalità scelta)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Usa un PAT personale con permessi repo (non il GITHUB_TOKEN di Actions)
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           python etl_prj_manager.py create-remote-prj github ${{ github.event.inputs.mode }}
