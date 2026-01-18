@@ -1,0 +1,27 @@
+name: Replica manuale GitHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "register o protocol"
+        required: true
+        default: register
+
+jobs:
+  replica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Installa dipendenze
+        run: |
+          pip install python-gitlab requests pyyaml gitpython
+      - name: Esegui replica (modalità scelta)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python etl_prj_manager.py create-remote-prj github ${{ github.event.inputs.mode }}

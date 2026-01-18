@@ -27,13 +27,16 @@ agency_config:
   agency_ipa_code: "codice"
 
 project_config:
-  gitlab_group_id: 123
-  gitlab_url: "https://..."
-  gitlab_username: "user"
-  gitlab_origin_remote_name: "nome-progetto-esistente"
   git_default_branch: "main"
-  github_owner: "my-org-o-utente"
-  github_visibility: "private"  # oppure "public"
+  gitlab:
+    group_id: 123
+    url: "https://..."
+    username: "user"
+    origin_remote_name: "nome-progetto-esistente"
+  github:
+    owner: "my-org-o-utente"
+    origin_remote_name: "nome-progetto-esistente"
+    visibility: "private"  # oppure "public"
 """
 
 import os
@@ -620,8 +623,12 @@ def build_protocol_csv_contents(protocol_cfg: dict):
 
 def mode_ls_remote_prj(cfg: dict, gitlab_token: str):
     proj_cfg = cfg["project_config"]
-    gl_client = init_gitlab_client(proj_cfg["gitlab_url"], gitlab_token)
-    projs = list_group_projects(gl_client, proj_cfg["gitlab_group_id"])
+    gitlab_cfg = proj_cfg.get("gitlab", {})
+    if not gitlab_cfg:
+        print("[ERRORE] Sezione project_config.gitlab mancante.")
+        sys.exit(1)
+    gl_client = init_gitlab_client(gitlab_cfg["url"], gitlab_token)
+    projs = list_group_projects(gl_client, gitlab_cfg["group_id"])
 
     print("Progetti nel gruppo:")
     for p in projs:
@@ -630,9 +637,10 @@ def mode_ls_remote_prj(cfg: dict, gitlab_token: str):
 
 def mode_ls_remote_prj_github(cfg: dict, github_token: str):
     proj_cfg = cfg["project_config"]
-    github_owner = proj_cfg.get("github_owner", "").strip()
+    github_cfg = proj_cfg.get("github", {})
+    github_owner = github_cfg.get("owner", "").strip()
     if not github_owner:
-        print("[ERRORE] 'project_config.github_owner' mancante nel config.yml.")
+        print("[ERRORE] 'project_config.github.owner' mancante nel config.yml.")
         sys.exit(1)
 
     headers = github_headers(github_token)
@@ -655,25 +663,29 @@ def mode_create_remote_prj_gitlab(cfg: dict, gitlab_token: str, submode: str):
 
     agency_cfg = cfg["agency_config"]
     proj_cfg = cfg["project_config"]
+    gitlab_cfg = proj_cfg.get("gitlab", {})
+    if not gitlab_cfg:
+        print("[ERRORE] Sezione project_config.gitlab mancante.")
+        sys.exit(1)
     ensure_agency_fields(agency_cfg)
 
-    gl_client = init_gitlab_client(proj_cfg["gitlab_url"], gitlab_token)
+    gl_client = init_gitlab_client(gitlab_cfg["url"], gitlab_token)
 
-    origin_name = proj_cfg["gitlab_origin_remote_name"].strip()
-    origin_project = find_origin_project(gl_client, proj_cfg["gitlab_group_id"], origin_name)
+    origin_name = gitlab_cfg["origin_remote_name"].strip()
+    origin_project = find_origin_project(gl_client, gitlab_cfg["group_id"], origin_name)
 
     new_project_name = derive_new_project_name(origin_project.name, agency_cfg["short_name_template"])
     print("Progetto sorgente:", origin_project.name)
     print("Nuovo progetto:", new_project_name)
 
     origin_repo_url = origin_project.http_url_to_repo
-    gitlab_user = proj_cfg["gitlab_username"].strip()
+    gitlab_user = gitlab_cfg["username"].strip()
     default_branch = proj_cfg.get("git_default_branch", "main")
 
     import_url = build_auth_url(origin_repo_url, gitlab_user, gitlab_token)
     new_gitlab_proj = create_gitlab_project_from_import(
         gl_client,
-        proj_cfg["gitlab_group_id"],
+        gitlab_cfg["group_id"],
         new_project_name,
         import_url,
         default_branch,
@@ -699,14 +711,18 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
 
     agency_cfg = cfg["agency_config"]
     proj_cfg = cfg["project_config"]
+    github_cfg = proj_cfg.get("github", {})
+    if not github_cfg:
+        print("[ERRORE] Sezione project_config.github mancante.")
+        sys.exit(1)
     ensure_agency_fields(agency_cfg)
 
-    github_owner = proj_cfg.get("github_owner", "").strip()
+    github_owner = github_cfg.get("owner", "").strip()
     if not github_owner:
-        print("[ERRORE] 'project_config.github_owner' mancante nel config.yml.")
+        print("[ERRORE] 'project_config.github.owner' mancante nel config.yml.")
         sys.exit(1)
 
-    origin_name = proj_cfg["gitlab_origin_remote_name"].strip()
+    origin_name = github_cfg["origin_remote_name"].strip()
     origin_repo = github_repo_exists(github_token, github_owner, origin_name)
     if not origin_repo:
         print(f"[ERRORE] Il progetto sorgente '{origin_name}' non esiste in GitHub (owner {github_owner}).")
@@ -719,7 +735,7 @@ def mode_create_remote_prj_github(cfg: dict, github_token: str, submode: str):
     origin_repo_url = origin_repo.get("clone_url")
     default_branch = proj_cfg.get("git_default_branch", "main")
 
-    github_private = proj_cfg.get("github_visibility", "private").lower() != "public"
+    github_private = github_cfg.get("visibility", "private").lower() != "public"
 
     created_repo = create_github_repo(
         github_token,

@@ -1,8 +1,8 @@
 # ETL prj manager config.yml
 agency_config:
-  short_name_template: "COM-GE"
+  short_name_template: "AAA-BB"
   category_id: 4
-  agency_ipa_code: 'odcec_ge'
+  agency_ipa_code: 'odcec_bb'
 users:
   number: 3
   user1:
@@ -12,13 +12,16 @@ users:
   user3:
     name: "VM_USER"
 project_config:
-  gitlab_group_id: 126
-  gitlab_url: "https://gitlab-management.visura.it/"
-  gitlab_username: "marco.peri@visura.it"
-  gitlab_origin_remote_name: "etl-albosmart-stand-alone-protocol-ARC-FI"
   git_default_branch: "main"
-  github_owner: "VisuraSpa"
-  github_visibility: "private"
+  gitlab:
+    group_id: 126
+    url: "https://gitlab-management.visura.it/"
+    username: "marco.peri@visura.it"
+    origin_remote_name: "etl-albosmart-stand-alone-protocol-ARC-FI"
+  github:
+    owner: "lupodargento"
+    origin_remote_name: "FaceERAAD_codereader_v1-3"
+    visibility: "private"
 register_config:
   default_privacy_template:
     profileName: "privacy template default profile"
@@ -67,39 +70,30 @@ protocol_config:
     number: 1
     AOO1:
       aoo1_alboclassic_aoo_id:
-      aoo1_accountable_email: 'ordinecommercialistigenova@pec.it'
-      aoo1_accountable_first_name: 'Mauro Carlo'
-      aoo1_accountable_last_name: 'Rovida'
-      aoo1_accountable_phone_number: '010589134'
-      aoo1_date_creation: '12/04/2019'
-      aoo1_name: 'Ordine dei Dottori Commercialisti e degli Esperti Contabili'
-      aoo1_unicode: 'A1D778D'
+      aoo1_accountable_email: 'prova.email@email.it'
+      aoo1_accountable_first_name: 'Mauro'
+      aoo1_accountable_last_name: 'verdi'
+      aoo1_accountable_phone_number: '123456'
+      aoo1_date_creation: '12/04/2025'
+      aoo1_name: 'nome Aoo 1'
+      aoo1_unicode: 'A22HH8D'
   UO:
-    number: 3
+    number: 2
     UO1:
       uo1_alboclassic_uo_id: 1
       uo1_albosmart_uo_id:
-      uo1_accountable_first_name: 'Mauro Carlo'
-      uo1_accountable_second_name: 'Rovida'
-      uo1_date_creation: '19/04/2019'
-      uo1_name: 'Ufficio per la transizione al Digitale'
-      uo1_unicode: 'CGNSNM'
+      uo1_accountable_first_name: 'Pietro'
+      uo1_accountable_second_name: 'Azzurri'
+      uo1_date_creation: '19/04/2025'
+      uo1_name: 'Ufficio per sessione Digitale'
+      uo1_unicode: 'CGN333'
       uo1_isDefault: 'true'
     UO2:
       uo2_alboclassic_uo_id: 3
       uo2_albosmart_uo_id:
-      uo2_accountable_first_name: 'Mauro Carlo'
-      uo2_accountable_second_name: 'Rovida'
-      uo2_date_creation: '24/03/2021'
-      uo2_name: 'OCC ORGANISMO DI COMPOSIZIONE DELLA CRISI DA SOVRAINDEBITAMENTO'
-      uo2_unicode: 'IBNDVK'
+      uo2_accountable_first_name: 'Marco'
+      uo2_accountable_second_name: 'Rossi'
+      uo2_date_creation: '24/03/2025'
+      uo2_name: 'Ufficio per sessione Cartacea'
+      uo2_unicode: '888DVK'
       uo2_isDefault: 'false'
-    UO3:
-      uo3_alboclassic_uo_id: 2
-      uo3_albosmart_uo_id:
-      uo3_accountable_first_name: 'Luigina'
-      uo3_accountable_second_name: 'Marrese'
-      uo3_date_creation: '07/06/2021'
-      uo3_name: 'FORMAZIONE'
-      uo3_unicode: 'K99ZM9'
-      uo3_isDefault: 'false'
